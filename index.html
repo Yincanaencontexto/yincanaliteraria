@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Yincana Literaria</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700&family=Inter:wght@400;600;700&family=Merriweather:wght@400;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            'cinzel-decorative': ['Cinzel Decorative', 'serif'],
+            'merriweather': ['Merriweather', 'serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+body {
+  font-family: 'Inter', sans-serif;
+  background-color: #0F172A;
+  color: #F1F5F9;
+  margin: 0;
+  padding: 0;
+  min-height: 100vh;
+}
+
+#root {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #2d3748;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #4a5568;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #718096;
+}
+
+.shadow-top {
+  box-shadow: 0 -2px 4px -1px rgba(0, 0, 0, 0.06), 0 -4px 5px -1px rgba(0, 0, 0, 0.1);
+}
+
+@keyframes sway {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(8deg); }
+  75% { transform: rotate(-8deg); }
+}
+
+.group:hover .animate-sway {
+    animation: sway 0.6s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 1s ease-out;
+}
+
+  </style>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+</head>
+<body class="bg-slate-900 text-slate-100">
+  <div id="root"></div>
+  <script>
+// Aplicación Yincana Literaria - Versión UMD
+(function() {
+  try {
+    // Verificar que React y ReactDOM estén disponibles
+    if (!window.React || !window.ReactDOM) {
+      throw new Error('React o ReactDOM no están disponibles');
+    }
+
+    const React = window.React;
+    const ReactDOM = window.ReactDOM;
+
+    // Tipos de pantalla
+    const ScreenView = {
+      SPLASH: 'SPLASH',
+      HOME: 'HOME',
+      MANUAL_KEY_VALIDATION: 'MANUAL_KEY_VALIDATION',
+      QR_SCANNER: 'QR_SCANNER',
+      BOOK_WORD_VALIDATION: 'BOOK_WORD_VALIDATION',
+      QUESTION: 'QUESTION',
+      SUCCESS: 'SUCCESS',
+      ERROR: 'ERROR',
+      COMPLETION: 'COMPLETION',
+    };
+
+    // Constantes de colores y configuración
+    const COLORS = {
+      primary: 'bg-slate-900',
+      secondary: 'bg-slate-800',
+      accent: 'bg-amber-500',
+      textPrimary: 'text-slate-100',
+      textSecondary: 'text-slate-400',
+      textAccent: 'text-amber-500',
+      border: 'border-slate-700',
+      buttonPrimary: 'bg-amber-500 hover:bg-amber-600',
+      buttonSecondary: 'bg-slate-700 hover:bg-slate-600',
+    };
+
+    const URL_IMAGE_HOME_SCREEN = 'https://storage.googleapis.com/genai_hackathon_2024_artefak_multimodal/home_screen_v2.webp';
+
+    const DESAFIOS = [
+      { 
+        id: 1, 
+        name: 'Los Bosques Susurrantes', 
+        apiKey: 'WOODS_KEY_EXAMPLE_123', 
+        bookWord: 'bosque', 
+        points: 10, 
+        completed: false,
+        questionPrompt: "En los Bosques Susurrantes, ¿qué criatura mágica se dice que guarda el roble ancestral?",
+        correctAnswer: "dríade", 
+        successMessage: "El guardián sonríe, sus ojos brillan como estrellas distantes. El sendero se despeja.",
+        answerHintInBook: "La respuesta se encuentra en el capítulo sobre espíritus del bosque, página 12.",
+        bookWordLocationHint: "Busca esta palabra en la descripción del claro del roble ancestral, página 5.",
+        nextQrHint: "Busca el siguiente símbolo en el mapa que muestra el sauce viejo." 
+      },
+      { 
+        id: 2, 
+        name: 'La Biblioteca Sumergida', 
+        apiKey: 'LIBRARY_KEY_EXAMPLE_456', 
+        bookWord: 'pergamino', 
+        points: 15, 
+        completed: false,
+        questionPrompt: "En los pasillos silenciosos de la Biblioteca Sumergida, ¿qué tomo revela el secreto de las mareas?",
+        correctAnswer: "luna", 
+        successMessage: "Un bibliotecario fantasmal asiente, y un pasaje oculto se abre con un gemido, revelando conocimiento olvidado.",
+        answerHintInBook: "Consulta el índice para 'Ciclos Lunares', en la sección sobre magia marítima.",
+        bookWordLocationHint: "La palabra clave está inscrita en el atril central de la biblioteca, mencionado en el capítulo sobre artefactos acuáticos.",
+        nextQrHint: "El siguiente emblema está grabado en el lomo del atlas más grande en la sección de geografía."  
+      },
+      { 
+        id: 3, 
+        name: 'El Pico de la Lluvia de Estrellas', 
+        apiKey: 'PEAK_KEY_EXAMPLE_789', 
+        bookWord: 'cometa', 
+        points: 20, 
+        completed: false,
+        questionPrompt: "En la cima del Pico de la Lluvia de Estrellas, ¿qué constelación debe alinearse para despertar al gigante dormido?",
+        correctAnswer: "orión", 
+        successMessage: "Las estrellas mismas se realinean, y la montaña tiembla mientras un poder ancestral se agita.",
+        answerHintInBook: "Las cartas celestiales en el apéndice muestran la constelación del 'Descanso del Gigante'.",
+        bookWordLocationHint: "Esta palabra se encuentra en la profecía grabada en el observatorio, sección de astronomía.",
+        nextQrHint: "Encuentra el siguiente QR cerca de la entrada del observatorio, oculto por una piedra suelta." 
+      },
+      { 
+        id: 4, 
+        name: 'Las Cavernas Cristalinas', 
+        apiKey: 'CAVES_KEY_GLIMMER_XYZ', 
+        bookWord: 'cristal', 
+        points: 25, 
+        completed: false,
+        questionPrompt: "En lo profundo de las Cavernas Cristalinas, ¿qué eco revela el sendero hacia la piedra corazón?",
+        correctAnswer: "agua", 
+        successMessage: "Los cristales vibran en armonía, y un pasaje oculto resplandece ante ti.",
+        answerHintInBook: "Busca la respuesta en la descripción de la 'Cámara de los Ecos', capítulo 3.",
+        bookWordLocationHint: "La palabra está oculta en el acertijo del guardián de la caverna, al final del capítulo 3.",
+        nextQrHint: "El siguiente símbolo está grabado detrás de la cascada de la entrada sur." 
+      },
+      { 
+        id: 5, 
+        name: 'La Ciudad de Engranajes', 
+        apiKey: 'CITY_KEY_GEARS_ABC', 
+        bookWord: 'autómata', 
+        points: 30, 
+        completed: false,
+        questionPrompt: "En el corazón de la Ciudad de Engranajes, ¿qué rueda, al girar, da vida al Gran Planetario?",
+        correctAnswer: "tiempo", 
+        successMessage: "Con un clic satisfactorio, los engranajes de la ciudad giran, revelando una nueva maravilla de la ingeniería.",
+        answerHintInBook: "El diagrama del 'Mecanismo Central' en el capítulo de inventos tiene la clave.",
+        bookWordLocationHint: "Encuentra esta palabra en los planos del inventor, cerca del diagrama del Gran Reloj.",
+        nextQrHint: "El próximo QR está en la placa del reloj de la plaza mayor." 
+      },
+      { 
+        id: 6, 
+        name: 'El Paso de la Serpiente', 
+        apiKey: 'PASS_KEY_SCALES_DEF', 
+        bookWord: 'veneno', 
+        points: 20, 
+        completed: false,
+        questionPrompt: "Para navegar con seguridad el Paso de la Serpiente, ¿qué ofrenda aplaca al antiguo guardián Coatl?",
+        correctAnswer: "flor", 
+        successMessage: "La gran serpiente inclina su cabeza escamada, otorgándote paso seguro a través de sus dominios.",
+        answerHintInBook: "La leyenda del 'Guardián Escamado' menciona el tributo necesario. Revisa el bestiario.",
+        bookWordLocationHint: "La palabra necesaria está tallada en el tótem que describe el ritual de paso seguro.",
+        nextQrHint: "Busca el siguiente código en el altar de piedra al final del paso." 
+      },
+      { 
+        id: 7, 
+        name: 'El Telar del Tejedor de Sueños', 
+        apiKey: 'LOOM_KEY_SILK_GHI', 
+        bookWord: 'pesadilla', 
+        points: 35, 
+        completed: false,
+        questionPrompt: "En el Telar del Tejedor de Sueños, ¿qué hebra, si se tira, puede desentrañar el miedo más profundo de un rey?",
+        correctAnswer: "esperanza", 
+        successMessage: "El telar resplandece, y los hilos del destino se realinean, concediéndote una visión del tapiz de los sueños.",
+        answerHintInBook: "El capítulo sobre 'Magia Onírica' detalla los hilos y sus propiedades.",
+        bookWordLocationHint: "Esta palabra se revela en el poema sobre el origen del telar, antes de la sección de patrones.",
+        nextQrHint: "El próximo emblema se encuentra en la última página, en la dedicatoria del autor." 
+      },
+      { 
+        id: 8, 
+        name: 'El Santuario del Oráculo Silente', 
+        apiKey: 'SHRINE_KEY_WHISPER_JKL', 
+        bookWord: 'silencio', 
+        points: 40, 
+        completed: false,
+        questionPrompt: "Ante el Santuario del Oráculo Silente, ¿qué verdad no dicha abre la última puerta de la sabiduría?",
+        correctAnswer: "amor", 
+        successMessage: "Un profundo entendimiento amanece, y la puerta final se abre, revelando la cúspide de tu búsqueda.",
+        answerHintInBook: "La respuesta final no está escrita, sino que se deduce del prólogo y el epílogo combinados.",
+        bookWordLocationHint: "La última palabra clave se insinúa en la meditación final del Oráculo, en el epílogo.",
+        nextQrHint: "¡Has completado la aventura! No hay más QR." 
+      },
+    ];
+
+    // Iconos SVG
+    const BookOpenIcon = (props) => React.createElement("svg", { ...props, xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+      React.createElement("path", { d: "M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z" }),
+      React.createElement("path", { d: "M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z" })
+    );
+
+    const QrCodeIcon = (props) => React.createElement("svg", { ...props, xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+      React.createElement("rect", { width: "5", height: "5", x: "3", y: "3", rx: "1" }),
+      React.createElement("rect", { width: "5", height: "5", x: "16", y: "3", rx: "1" }),
+      React.createElement("rect", { width: "5", height: "5", x: "3", y: "16", rx: "1" }),
+      React.createElement("path", { d: "M21 16h-5a2 2 0 0 0-2 2v3" }),
+      React.createElement("path", { d: "M21 21v.01" }),
+      React.createElement("path", { d: "M12 7v3a2 2 0 0 1-2 2H7" }),
+      React.createElement("path", { d: "M3 12h.01" }),
+      React.createElement("path", { d: "M12 3h.01" }),
+      React.createElement("path", { d: "M12 16h.01" }),
+      React.createElement("path", { d: "M16 12h.01" }),
+      React.createElement("path", { d: "M12 21v-1a2 2 0 0 0-2-2H7" }),
+      React.createElement("path", { d: "M7 12v3a2 2 0 0 0 2 2h3" })
+    );
+
+    const KeyIcon = (props) => React.createElement("svg", { ...props, xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+      React.createElement("circle", { cx: "7.5", cy: "15.5", r: "5.5" }),
+      React.createElement("path", { d: "m21 2-9.6 9.6" }),
+      React.createElement("path", { d: "m15.5 7.5 3 3L22 7l-3-3" })
+    );
+    
+    const HomeIcon = (props) => React.createElement("svg", { ...props, xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+      React.createElement("path", { d: "m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" }),
+      React.createElement("polyline", { points: "9 22 9 12 15 12 15 22" })
+    );
+
+    const CheckCircleIcon = (props) => React.createElement("svg", { ...props, xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+      React.createElement("path", { d: "M22 11.08V12a10 10 0 1 1-5.93-9.14" }),
+      React.createElement("polyline", { points: "22 4 12 14.01 9 11.01" })
+    );
+
+    const XCircleIcon = (props) => React.createElement("svg", { ...props, xmlns: "http://www.w3.org/2000/svg", width: "24", height: "24", viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: "2", strokeLinecap: "round", strokeLinejoin: "round" },
+      React.createElement("circle", { cx: "12", cy: "12", r: "10" }),
+      React.createElement("line", { x1: "15", y1: "9", x2: "9", y2: "15" }),
+      React.createElement("line", { x1: "9", y1: "9", x2: "15", y2: "15" })
+    );
+
+    // Componente Button
+    const Button = ({ onClick, children, className = '', variant = 'primary', type = 'button', disabled = false }) => {
+      const baseStyle = "px-6 py-3 rounded-lg text-lg font-semibold shadow-md transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900";
+      const variantStyle = variant === 'primary' 
+        ? `${COLORS.buttonPrimary} ${COLORS.textPrimary} focus:ring-amber-400`
+        : `${COLORS.buttonSecondary} ${COLORS.textPrimary} focus:ring-slate-500`;
+      const disabledStyle = disabled ? "opacity-50 cursor-not-allowed" : "";
+
+      return React.createElement(
+        "button",
+        { type: type, onClick: onClick, className: `${baseStyle} ${variantStyle} ${disabledStyle} ${className}`, disabled: disabled },
+        children
+      );
+    };
+
+    // Pantalla de Bienvenida
+    const SplashScreen = ({ onStart }) => {
+      const [visible, setVisible] = React.useState(false);
+
+      React.useEffect(() => {
+        const timer = setTimeout(() => setVisible(true), 100);
+        return () => clearTimeout(timer);
+      }, []);
+
+      return React.createElement("div", {
+        className: `flex flex-col items-center justify-center min-h-screen p-8 text-center ${COLORS.primary} ${COLORS.textPrimary} transition-opacity duration-1000 ease-out ${visible ? 'opacity-100' : 'opacity-0'}`
+      },
+        React.createElement(BookOpenIcon, { className: "w-24 h-24 text-amber-400 mb-8 animate-pulse" }),
+        React.createElement("h1", {
+          className: "text-6xl font-cinzel-decorative font-bold mb-4",
+          style: { textShadow: '2px 2px 4px rgba(0,0,0,0.5)' }
+        }, "Yincana Literaria"),
+        React.createElement("p", {
+          className: "text-xl font-merriweather mb-12 max-w-2xl"
+        }, "Embárcate en un viaje épico a través de tierras encantadas. Resuelve acertijos, desbloquea secretos y conviértete en un maestro del conocimiento."),
+        React.createElement(Button, { onClick: onStart, className: "font-cinzel-decorative text-2xl px-10 py-4" }, "Comenzar tu Aventura")
+      );
+    };
+
+    // Pie de página de desafío
+    const ChallengeFooter = ({ currentChallenge, totalChallenges, score }) => {
+      return React.createElement("div", { className: `fixed bottom-0 left-0 right-0 ${COLORS.secondary} p-3 border-t ${COLORS.border} shadow-top flex justify-between items-center` },
+        React.createElement("div", { className: `${COLORS.textSecondary} text-sm` },
+          React.createElement("p", null, `Desafío: ${currentChallenge + 1} / ${totalChallenges}`)
+        ),
+        React.createElement("div", { className: `${COLORS.textAccent} font-bold text-lg` },
+          `Puntuación: ${score}`
+        )
+      );
+    };
+
+    // Barra de navegación inferior
+    const BottomNavigationBar = ({ currentView, onNavigate, unlockedChallengesCount }) => {
+      const navItems = [
+        { view: ScreenView.HOME, label: "Inicio", icon: HomeIcon },
+        { view: ScreenView.QR_SCANNER, label: "Escanear QR", icon: QrCodeIcon },
+        { view: ScreenView.MANUAL_KEY_VALIDATION, label: "Ingresar Clave", icon: KeyIcon },
+      ];
+
+      return React.createElement("nav", {
+        className: `fixed bottom-0 left-0 right-0 ${COLORS.secondary} border-t ${COLORS.border} shadow-top flex justify-around items-center py-2 px-1 z-50`
+      },
+        navItems.map(item => React.createElement("button", {
+          key: item.view,
+          onClick: () => onNavigate(item.view),
+          className: `flex flex-col items-center justify-center p-2 rounded-lg transition-colors duration-200 ${
+            currentView === item.view 
+              ? `${COLORS.textAccent} bg-amber-500/10` 
+              : `${COLORS.textSecondary} hover:${COLORS.textPrimary}`
+          }`
+        },
+          React.createElement(item.icon, { className: "w-6 h-6 mb-1" }),
+          React.createElement("span", { className: "text-xs font-medium" }, item.label)
+        ))
+      );
+    };
+
+    // Pantalla principal
+    const HomeScreen = ({ challenges, onChallengeSelect, score, totalScore }) => {
+      const [imageLoaded, setImageLoaded] = React.useState(false);
+      const [imageError, setImageError] = React.useState(false);
+
+      const completedChallenges = challenges.filter(c => c.completed).length;
+      const progressPercentage = Math.round((score / totalScore) * 100);
+
+      return React.createElement("div", { className: `min-h-screen ${COLORS.primary} pb-20` },
+        React.createElement("div", { className: "relative max-w-4xl mx-auto" },
+          React.createElement("div", { className: "relative h-64 overflow-hidden rounded-lg mx-4 mt-4" },
+            !imageError && React.createElement("img", {
+              src: URL_IMAGE_HOME_SCREEN,
+              alt: "Yincana Literaria",
+              className: `w-full h-full object-cover transition-opacity duration-500 ${imageLoaded ? 'opacity-100' : 'opacity-0'}`,
+              onLoad: () => setImageLoaded(true),
+              onError: () => setImageError(true)
+            }),
+            imageError && React.createElement("div", { className: "absolute inset-0 flex items-center justify-center bg-slate-800 text-slate-400" }, "Imagen no disponible")
+          ),
+          React.createElement("div", { className: "text-center mt-4 mb-6" },
+            React.createElement("h1", { className: `text-4xl font-cinzel-decorative font-bold ${COLORS.textAccent}` }, "YINCANA LITERARIA"),
+            React.createElement("p", { className: `${COLORS.textSecondary} text-sm` }, "Tu aventura te espera, buscador del conocimiento.")
+          ),
+          React.createElement("div", { className: "mx-4 mb-6" },
+            React.createElement("h2", { className: `text-lg font-semibold mb-2 ${COLORS.textPrimary}` }, "Progreso General"),
+            React.createElement("div", { className: `w-full ${COLORS.secondary} rounded-full h-3 mb-2` },
+              React.createElement("div", { 
+                className: `bg-amber-500 h-3 rounded-full`,
+                style: { width: `${progressPercentage}%` }
+              })
+            ),
+            React.createElement("div", { className: "flex justify-between text-sm" },
+              React.createElement("span", { className: COLORS.textSecondary }, `${completedChallenges} / ${challenges.length} Desafíos Completados`),
+              React.createElement("span", { className: COLORS.textAccent }, `Puntuación Actual: ${score} / ${totalScore} pts`)
+            )
+          ),
+          React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 gap-4 mx-4 pb-4" },
+            challenges.map(challenge => React.createElement(ChallengeCard, { 
+              key: challenge.id, 
+              challenge: challenge, 
+              onSelect: onChallengeSelect 
+            }))
+          )
+        )
+      );
+    };
+
+    const ChallengeCard = ({ challenge, onSelect }) => {
+      const borderColor = challenge.completed ? 'border-green-500' : COLORS.border;
+      return React.createElement("button", {
+        onClick: () => onSelect(challenge),
+        className: `group relative p-6 rounded-xl ${COLORS.secondary} border-2 ${borderColor} hover:shadow-lg transition-all duration-300 ease-in-out transform hover:scale-105 text-left`
+      },
+        React.createElement("div", { className: "flex items-center justify-between mb-2" },
+          React.createElement("h2", { className: `text-xl font-merriweather font-semibold ${challenge.completed ? COLORS.textSecondary : COLORS.textPrimary}` }, challenge.name),
+          challenge.completed
+            ? React.createElement(CheckCircleIcon, { className: "w-6 h-6 text-green-500" })
+            : React.createElement(KeyIcon, { className: `w-6 h-6 ${COLORS.textAccent} group-hover:animate-sway` })
+        ),
+        React.createElement("p", { className: `${COLORS.textSecondary} text-sm mb-1` }, `Desbloquea ${challenge.points} puntos.`),
+        challenge.completed && React.createElement("p", { className: "text-green-400 text-xs italic" }, "¡Completado!")
+      );
+    };
+
+    // Aplicación principal
+    const App = () => {
+      const [currentView, setCurrentView] = React.useState(ScreenView.SPLASH);
+      const [challenges, setChallenges] = React.useState(DESAFIOS);
+      const [currentChallenge, setCurrentChallenge] = React.useState(null);
+      const [score, setScore] = React.useState(0);
+      const [error, setError] = React.useState(null);
+
+      const totalScore = challenges.reduce((sum, challenge) => sum + challenge.points, 0);
+      const unlockedChallengesCount = challenges.filter(c => c.completed).length;
+
+      const handleStart = () => {
+        // Verificar si todos los desafíos ya están completados
+        const allCompleted = challenges.every(c => c.completed);
+        if (allCompleted) {
+          setCurrentView(ScreenView.COMPLETION);
+        } else {
+          setCurrentView(ScreenView.HOME);
+        }
+      };
+
+      const handleChallengeSelect = (challenge) => {
+        setCurrentChallenge(challenge);
+        setError(null);
+        setCurrentView(ScreenView.MANUAL_KEY_VALIDATION);
+      };
+
+      const handleValidateKey = (key) => {
+        if (currentChallenge && key === currentChallenge.apiKey) {
+          setCurrentView(ScreenView.BOOK_WORD_VALIDATION);
+          setError(null);
+        } else {
+          setError("Clave incorrecta. Inténtalo de nuevo.");
+        }
+      };
+
+      const handleValidateWord = (word) => {
+        if (currentChallenge && word.toLowerCase() === currentChallenge.bookWord.toLowerCase()) {
+          setCurrentView(ScreenView.QUESTION);
+          setError(null);
+        } else {
+          setError("Palabra incorrecta. Revisa el libro.");
+        }
+      };
+
+      const handleBack = () => {
+        if (currentView === ScreenView.MANUAL_KEY_VALIDATION) {
+          setCurrentView(ScreenView.HOME);
+        } else if (currentView === ScreenView.BOOK_WORD_VALIDATION) {
+          setCurrentView(ScreenView.MANUAL_KEY_VALIDATION);
+        } else if (currentView === ScreenView.QUESTION) {
+          setCurrentView(ScreenView.BOOK_WORD_VALIDATION);
+        } else if (currentView === ScreenView.SUCCESS) {
+          setCurrentView(ScreenView.HOME);
+        } else if (currentView === ScreenView.COMPLETION) {
+          setCurrentView(ScreenView.HOME);
+        }
+        setError(null);
+      };
+
+      const handleNavigate = (view) => {
+        setCurrentView(view);
+        setError(null);
+      };
+
+      const handleSubmitAnswer = (answer) => {
+        if (currentChallenge && answer.toLowerCase() === currentChallenge.correctAnswer.toLowerCase()) {
+          // Marcar desafío como completado
+          setChallenges(prev => prev.map(c => 
+            c.id === currentChallenge.id ? { ...c, completed: true } : c
+          ));
+          setScore(prev => prev + currentChallenge.points);
+          setCurrentView(ScreenView.SUCCESS);
+          setError(null);
+        } else {
+          setError("Respuesta incorrecta. Inténtalo de nuevo.");
+        }
+      };
+
+      const handleSuccess = () => {
+        // Verificar si se completaron todos los desafíos
+        const updatedChallenges = challenges.map(c => 
+          c.id === currentChallenge.id ? { ...c, completed: true } : c
+        );
+        const allCompleted = updatedChallenges.every(c => c.completed);
+        
+        if (allCompleted) {
+          setCurrentView(ScreenView.COMPLETION);
+        } else {
+          setCurrentView(ScreenView.HOME);
+        }
+        setCurrentChallenge(null);
+      };
+
+      // Renderizar vista actual
+      if (currentView === ScreenView.SPLASH) {
+        return React.createElement(SplashScreen, { onStart: handleStart });
+      }
+
+      if (currentView === ScreenView.HOME) {
+        return React.createElement("div", { className: "relative" },
+          React.createElement(HomeScreen, { 
+            challenges: challenges, 
+            onChallengeSelect: handleChallengeSelect,
+            score: score,
+            totalScore: totalScore
+          }),
+          React.createElement(BottomNavigationBar, { 
+            currentView: currentView, 
+            onNavigate: handleNavigate,
+            unlockedChallengesCount: unlockedChallengesCount
+          })
+        );
+      }
+
+      if (currentView === ScreenView.MANUAL_KEY_VALIDATION) {
+        return React.createElement("div", { className: "relative" },
+          React.createElement(ManualKeyValidationScreen, { 
+            onValidateKey: handleValidateKey, 
+            onBack: handleBack,
+            error: error
+          }),
+          React.createElement(BottomNavigationBar, { 
+            currentView: currentView, 
+            onNavigate: handleNavigate,
+            unlockedChallengesCount: unlockedChallengesCount
+          })
+        );
+      }
+
+      if (currentView === ScreenView.BOOK_WORD_VALIDATION) {
+        return React.createElement("div", { className: "relative" },
+          React.createElement(BookWordValidationScreen, { 
+            challenge: currentChallenge,
+            onValidateWord: handleValidateWord, 
+            onBack: handleBack,
+            error: error
+          }),
+          React.createElement(BottomNavigationBar, { 
+            currentView: currentView, 
+            onNavigate: handleNavigate,
+            unlockedChallengesCount: unlockedChallengesCount
+          })
+        );
+      }
+
+      if (currentView === ScreenView.QUESTION) {
+        return React.createElement("div", { className: "relative" },
+          React.createElement(QuestionScreen, { 
+            challenge: currentChallenge,
+            onSubmitAnswer: handleSubmitAnswer, 
+            onBack: handleBack,
+            error: error
+          }),
+          React.createElement(BottomNavigationBar, { 
+            currentView: currentView, 
+            onNavigate: handleNavigate,
+            unlockedChallengesCount: unlockedChallengesCount
+          })
+        );
+      }
+
+      if (currentView === ScreenView.SUCCESS) {
+        return React.createElement("div", { className: "relative" },
+          React.createElement(SuccessScreen, { 
+            challenge: currentChallenge,
+            onContinue: handleSuccess
+          }),
+          React.createElement(BottomNavigationBar, { 
+            currentView: currentView, 
+            onNavigate: handleNavigate,
+            unlockedChallengesCount: unlockedChallengesCount
+          })
+        );
+      }
+
+      if (currentView === ScreenView.COMPLETION) {
+        return React.createElement(CompletionScreen, { 
+          score: score,
+          totalScore: totalScore,
+          onRestart: () => {
+            // Reiniciar el juego
+            setChallenges(DESAFIOS.map(d => ({ ...d, completed: false })));
+            setScore(0);
+            setCurrentView(ScreenView.HOME);
+            setCurrentChallenge(null);
+            setError(null);
+          }
+        });
+      }
+
+      // Vista por defecto
+      return React.createElement("div", { className: "min-h-screen bg-slate-900 text-slate-100 flex items-center justify-center" },
+        React.createElement("p", null, "Vista no encontrada")
+      );
+    };
+
+    // Pantalla de validación manual de clave
+    const ManualKeyValidationScreen = ({ onValidateKey, onBack, error: externalError }) => {
+      const [apiKey, setApiKey] = React.useState('');
+      const [internalError, setInternalError] = React.useState(null);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setInternalError(null); 
+        if (apiKey.trim()) {
+          onValidateKey(apiKey.trim());
+        } else {
+          setInternalError("La clave no puede estar vacía.");
+        }
+      };
+      
+      const displayError = externalError || internalError;
+
+      return React.createElement("div", { className: `flex flex-col items-center justify-center min-h-screen p-6 ${COLORS.primary} animate-fadeIn pb-20` },
+        React.createElement("div", { className: `w-full max-w-md mx-auto p-8 rounded-xl shadow-2xl ${COLORS.secondary}` },
+          React.createElement(KeyIcon, { className: `w-16 h-16 ${COLORS.textAccent} mx-auto mb-6` }),
+          React.createElement("h1", { className: `text-3xl font-cinzel-decorative font-bold text-center mb-6 ${COLORS.textPrimary}` }, "Ingresar Clave Secreta"),
+          React.createElement("p", { className: `text-sm ${COLORS.textSecondary} text-center mb-4 -mt-4 px-2`}, 
+            "Esta clave (ej. PEAK_KEY_EXAMPLE_789) se encuentra usualmente impresa en el libro, cerca del código QR. Úsala si no puedes escanear."
+          ),
+          React.createElement("form", { onSubmit: handleSubmit, className: "space-y-6" },
+            React.createElement("div", null,
+              React.createElement("label", { htmlFor: "apiKey", className: `block text-sm font-medium ${COLORS.textSecondary} mb-1` }, "Clave Secreta del Desafío"),
+              React.createElement("input", {
+                type: "text",
+                id: "apiKey",
+                name: "apiKey",
+                value: apiKey,
+                onChange: (e) => setApiKey(e.target.value),
+                className: `w-full px-4 py-3 rounded-lg ${COLORS.primary} ${COLORS.textPrimary} border ${COLORS.border} focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-shadow`,
+                placeholder: "ej. WOODS_KEY_EXAMPLE_123",
+              })
+            ),
+            displayError && React.createElement("p", { className: "text-red-500 text-sm text-center" }, displayError),
+            React.createElement(Button, { type: "submit", className: "w-full" }, "Validar Clave"),
+            React.createElement(Button, { onClick: onBack, variant: "secondary", className: "w-full" }, "Atrás")
+          )
+        )
+      );
+    };
+
+    // Pantalla de validación de palabra del libro
+    const BookWordValidationScreen = ({ challenge, onValidateWord, onBack, error: externalError }) => {
+      const [bookWord, setBookWord] = React.useState('');
+      const [internalError, setInternalError] = React.useState(null);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setInternalError(null);
+        if (bookWord.trim()) {
+          onValidateWord(bookWord.trim());
+        } else {
+          setInternalError("La palabra no puede estar vacía.");
+        }
+      };
+
+      const displayError = externalError || internalError;
+
+      return React.createElement("div", { className: `flex flex-col items-center justify-center min-h-screen p-6 ${COLORS.primary} animate-fadeIn pb-20` },
+        React.createElement("div", { className: `w-full max-w-md mx-auto p-8 rounded-xl shadow-2xl ${COLORS.secondary}` },
+          React.createElement(BookOpenIcon, { className: `w-16 h-16 ${COLORS.textAccent} mx-auto mb-6` }),
+          React.createElement("h1", { className: `text-3xl font-cinzel-decorative font-bold text-center mb-6 ${COLORS.textPrimary}` }, "Palabra del Libro"),
+          React.createElement("p", { className: `text-sm ${COLORS.textSecondary} text-center mb-4 -mt-4 px-2`}, 
+            "Ingresa la palabra clave que se encuentra en el libro para este desafío."
+          ),
+          challenge.bookWordLocationHint && React.createElement("p", { className: `text-xs ${COLORS.textSecondary} text-center mb-4 px-2 italic`}, 
+            `Pista: ${challenge.bookWordLocationHint}`
+          ),
+          React.createElement("form", { onSubmit: handleSubmit, className: "space-y-6" },
+            React.createElement("div", null,
+              React.createElement("label", { htmlFor: "bookWord", className: `block text-sm font-medium ${COLORS.textSecondary} mb-1` }, "Palabra Clave"),
+              React.createElement("input", {
+                type: "text",
+                id: "bookWord",
+                name: "bookWord",
+                value: bookWord,
+                onChange: (e) => setBookWord(e.target.value),
+                className: `w-full px-4 py-3 rounded-lg ${COLORS.primary} ${COLORS.textPrimary} border ${COLORS.border} focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-shadow`,
+                placeholder: "ej. aventura",
+              })
+            ),
+            displayError && React.createElement("p", { className: "text-red-500 text-sm text-center" }, displayError),
+            React.createElement(Button, { type: "submit", className: "w-full" }, "Validar Palabra"),
+            React.createElement(Button, { onClick: onBack, variant: "secondary", className: "w-full" }, "Atrás")
+          )
+        )
+      );
+    };
+
+    // Pantalla de pregunta
+    const QuestionScreen = ({ challenge, onSubmitAnswer, onBack, error: externalError }) => {
+      const [answer, setAnswer] = React.useState('');
+      const [internalError, setInternalError] = React.useState(null);
+      const [showHint, setShowHint] = React.useState(false);
+
+      const handleSubmit = (e) => {
+        e.preventDefault();
+        setInternalError(null);
+        if (answer.trim()) {
+          onSubmitAnswer(answer.trim());
+        } else {
+          setInternalError("La respuesta no puede estar vacía.");
+        }
+      };
+
+      const displayError = externalError || internalError;
+
+      return React.createElement("div", { className: `flex flex-col items-center justify-center min-h-screen p-6 ${COLORS.primary} animate-fadeIn pb-20` },
+        React.createElement("div", { className: `w-full max-w-md mx-auto p-8 rounded-xl shadow-2xl ${COLORS.secondary}` },
+          React.createElement(KeyIcon, { className: `w-16 h-16 ${COLORS.textAccent} mx-auto mb-6` }),
+          React.createElement("h1", { className: `text-3xl font-cinzel-decorative font-bold text-center mb-6 ${COLORS.textPrimary}` }, "Pregunta del Desafío"),
+          React.createElement("p", { className: `text-lg ${COLORS.textPrimary} text-center mb-6` }, challenge.questionPrompt),
+          React.createElement("form", { onSubmit: handleSubmit, className: "space-y-6" },
+            React.createElement("div", null,
+              React.createElement("label", { htmlFor: "answer", className: `block text-sm font-medium ${COLORS.textSecondary} mb-1` }, "Tu Respuesta"),
+              React.createElement("input", {
+                type: "text",
+                id: "answer",
+                name: "answer",
+                value: answer,
+                onChange: (e) => setAnswer(e.target.value),
+                className: `w-full px-4 py-3 rounded-lg ${COLORS.primary} ${COLORS.textPrimary} border ${COLORS.border} focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none transition-shadow`,
+                placeholder: "ej. dragón",
+              })
+            ),
+            displayError && React.createElement("p", { className: "text-red-500 text-sm text-center" }, displayError),
+            React.createElement(Button, { type: "submit", className: "w-full" }, "Enviar Respuesta"),
+            challenge.answerHintInBook && React.createElement(Button, { onClick: () => setShowHint(!showHint), variant: "secondary", className: "w-full" }, 
+              showHint ? "Ocultar Pista" : "Mostrar Pista del Libro"
+            )
+          ),
+          showHint && React.createElement("div", {className: `mt-4 text-xs ${COLORS.textSecondary} italic p-3 border ${COLORS.border} rounded bg-slate-800/50`}, 
+            React.createElement("strong", {className: "text-amber-300"}, "Pista del Libro: "),
+            challenge.answerHintInBook || "No hay pista específica disponible para este desafío."
+          ),
+           React.createElement(Button, { onClick: onBack, variant: "secondary", className: "w-full mt-4 text-xs" }, "Atrás")
+        )
+      );
+    };
+
+    // Pantalla de éxito
+    const SuccessScreen = ({ challenge, onContinue }) => {
+      return React.createElement("div", { className: `flex flex-col items-center justify-center min-h-screen p-6 ${COLORS.primary} animate-fadeIn pb-20` },
+        React.createElement("div", { className: `w-full max-w-lg mx-auto p-8 rounded-xl shadow-2xl ${COLORS.secondary} text-center` },
+          React.createElement(CheckCircleIcon, { className: "w-24 h-24 text-green-500 mx-auto mb-6" }),
+          React.createElement("h1", { className: `text-4xl font-cinzel-decorative font-bold mb-4 ${COLORS.textAccent}` }, "¡Desafío Completado!"),
+          React.createElement("h2", { className: `text-2xl font-merriweather font-semibold mb-4 ${COLORS.textPrimary}` }, challenge.name),
+          React.createElement("p", { className: `text-lg ${COLORS.textSecondary} mb-6 italic` }, challenge.successMessage),
+          React.createElement("div", { className: `p-4 rounded-lg ${COLORS.primary} border ${COLORS.border} mb-6` },
+            React.createElement("p", { className: `text-2xl font-bold ${COLORS.textAccent}` }, `+${challenge.points} puntos`),
+            React.createElement("p", { className: `text-sm ${COLORS.textSecondary}` }, "¡Bien hecho, aventurero!")
+          ),
+          challenge.nextQrHint && React.createElement("div", { className: `mb-6 p-3 rounded-md ${COLORS.primary} border ${COLORS.border} text-sm` },
+            React.createElement("strong", { className: `${COLORS.textAccent}` }, "Próximo Paso: "),
+            React.createElement("span", { className: `${COLORS.textSecondary}` }, challenge.nextQrHint)
+          ),
+          React.createElement(Button, { onClick: onContinue, className: "w-full" }, "Continuar Aventura")
+        )
+      );
+    };
+
+    // Pantalla de finalización (todos los desafíos completados)
+    const CompletionScreen = ({ score, totalScore, onRestart }) => {
+      const handleDownloadCertificate = () => {
+        // IMPORTANTE: Reemplaza esta URL con la URL real de tu certificado PDF alojado en la nube
+        // Ejemplos de servicios de alojamiento:
+        // - Google Drive: https://drive.google.com/uc?export=download&id=TU_ID_DE_ARCHIVO
+        // - Dropbox: https://dl.dropboxusercontent.com/s/TU_ENLACE/certificado.pdf
+        // - AWS S3: https://tu-bucket.s3.amazonaws.com/certificado.pdf
+        // - Tu propio servidor: https://tu-dominio.com/certificados/certificado.pdf
+        const certificateUrl = 'https://tu-servidor.com/certificado.pdf';
+        
+        // Crear un enlace temporal para descargar el archivo
+        const link = document.createElement('a');
+        link.href = certificateUrl;
+        link.download = 'Certificado_Busqueda_Literaria.pdf';
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      };
+
+      return React.createElement("div", { className: `flex flex-col items-center justify-center min-h-screen p-6 ${COLORS.primary} animate-fadeIn` },
+        React.createElement("div", { className: `w-full max-w-2xl mx-auto p-8 rounded-xl shadow-2xl ${COLORS.secondary} text-center` },
+          React.createElement("div", { className: "mb-8" },
+            React.createElement("div", { className: "flex justify-center mb-6" },
+              React.createElement("div", { className: "relative" },
+                React.createElement(CheckCircleIcon, { className: "w-32 h-32 text-green-500" }),
+                React.createElement("div", { className: "absolute inset-0 flex items-center justify-center" },
+                  React.createElement("span", { className: "text-4xl" }, "🏆")
+                )
+              )
+            ),
+            React.createElement("h1", { className: `text-5xl font-cinzel-decorative font-bold mb-4 ${COLORS.textAccent}` }, "¡Felicitaciones!"),
+            React.createElement("h2", { className: `text-3xl font-merriweather font-semibold mb-6 ${COLORS.textPrimary}` }, "Has Completado la Búsqueda Literaria")
+          ),
+          
+          React.createElement("div", { className: `p-6 rounded-lg ${COLORS.primary} border ${COLORS.border} mb-8` },
+            React.createElement("p", { className: `text-3xl font-bold ${COLORS.textAccent} mb-2` }, `${score} / ${totalScore} puntos`),
+            React.createElement("p", { className: `text-lg ${COLORS.textSecondary}` }, "¡Puntuación perfecta! Eres un verdadero maestro del conocimiento.")
+          ),
+
+          React.createElement("div", { className: `mb-8 p-4 rounded-md ${COLORS.primary} border ${COLORS.border}` },
+            React.createElement("p", { className: `text-lg ${COLORS.textPrimary} mb-4` }, 
+              "Has demostrado tu sabiduría y perseverancia completando todos los desafíos. Como reconocimiento a tu logro, puedes descargar tu certificado oficial."
+            )
+          ),
+
+          React.createElement("div", { className: "space-y-4" },
+            React.createElement(Button, { 
+              onClick: handleDownloadCertificate, 
+              className: "w-full text-lg py-4 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-600 hover:to-amber-700" 
+            }, 
+              React.createElement("div", { className: "flex items-center justify-center space-x-2" },
+                React.createElement("span", null, "📜"),
+                React.createElement("span", null, "Descargar Certificado PDF")
+              )
+            ),
+            React.createElement(Button, { 
+              onClick: onRestart, 
+              variant: "secondary", 
+              className: "w-full" 
+            }, "Comenzar Nueva Aventura")
+          )
+        )
+      );
+    };
+
+    // Renderizar la aplicación
+    const container = document.getElementById('root');
+    if (container) {
+      if (ReactDOM.createRoot) {
+        const root = ReactDOM.createRoot(container);
+        root.render(React.createElement(App));
+      } else {
+        ReactDOM.render(React.createElement(App), container);
+      }
+    }
+  } catch (error) {
+    console.error("Error al inicializar la aplicación:", error);
+    document.getElementById('root').innerHTML = `<div style="color: red; text-align: center; padding: 20px;">Error al cargar la aplicación: ${error.message}. Por favor, revisa la consola para más detalles.</div>`;
+  }
+})();
+  </script>
+</body>
+</html>
+
